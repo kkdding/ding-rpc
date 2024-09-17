@@ -1,5 +1,6 @@
 package com.ding.example.consumer;
 
+import com.ding.dingrpc.proxy.ServiceProxyFactory;
 import com.ding.example.common.model.User;
 import com.ding.example.common.service.UserService;
 
@@ -9,13 +10,16 @@ import com.ding.example.common.service.UserService;
 public class EasyConsumerExample {
     public static void main(String[] args) {
         // 静态代理
-        UserService userService = new UserServiceProxy();
+//        UserService userService = new UserServiceProxy();
+        // 动态代理
+        UserService userService = ServiceProxyFactory.getProxy(UserService.class);
         User user = new User();
         user.setName("ding");
         // 调用
         User newUser = userService.getUser(user);
         if (newUser != null) {
             System.out.println(newUser.getName());
+            System.out.println(newUser);
         } else {
             System.out.println("user == null");
         }
