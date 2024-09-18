@@ -1,0 +1,4 @@
+rpc:
+  name: dingrpc
+  version: 2.0
+  serverPort: 50002

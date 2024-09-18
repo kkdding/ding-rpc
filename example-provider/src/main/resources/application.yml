@@ -1,0 +1,8 @@
+rpc:
+  name: dingrpc
+  version: 2.0
+  mock: false
+  serializer: jdk
+  serverHost: localhost
+  serverPort: 50002
+

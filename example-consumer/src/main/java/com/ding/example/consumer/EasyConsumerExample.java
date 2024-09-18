@@ -1,5 +1,6 @@
 package com.ding.example.consumer;
 
+import com.ding.dingrpc.proxy.ServiceProxyFactory;
 import com.ding.example.common.model.User;
 import com.ding.example.common.service.UserService;
 

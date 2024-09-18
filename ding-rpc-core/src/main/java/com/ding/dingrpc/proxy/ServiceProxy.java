@@ -2,6 +2,8 @@ package com.ding.dingrpc.proxy;
 
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
+import com.ding.dingrpc.RpcApplication;
+import com.ding.dingrpc.config.RpcConfig;
 import com.ding.dingrpc.model.RpcRequest;
 import com.ding.dingrpc.model.RpcResponse;
 import com.ding.dingrpc.serializer.JdkSerializer;
@@ -40,9 +42,14 @@ public class ServiceProxy implements InvocationHandler {
         try {
             // 序列化
             byte[] bodyBytes = serializer.serialize(rpcRequest);
+            // 构造请求地址
+            RpcConfig rpcConfig = RpcApplication.getRpcConfig();
+            String url = "http://" +
+                    rpcConfig.getServerHost() +
+                    ":" +
+                    rpcConfig.getServerPort();
             // 发送请求
-            // todo 注意，这里地址被硬编码了（需要使用注册中心和服务发现机制解决）
-            try (HttpResponse httpResponse = HttpRequest.post("http://localhost:50000")
+            try (HttpResponse httpResponse = HttpRequest.post(url)
                     .body(bodyBytes)
                     .execute()) {
                 byte[] result = httpResponse.bodyBytes();
