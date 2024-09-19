@@ -2,7 +2,7 @@ rpc:
   name: dingrpc
   version: 2.0
   mock: false
-  serializer: jdk
+  serializer: hessian
   serverHost: localhost
   serverPort: 50002
 

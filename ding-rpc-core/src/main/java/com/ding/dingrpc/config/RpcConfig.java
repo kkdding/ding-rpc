@@ -1,5 +1,6 @@
 package com.ding.dingrpc.config;
 
+import com.ding.dingrpc.serializer.SerializerKeys;
 import lombok.Data;
 
 /**
@@ -32,5 +33,10 @@ public class RpcConfig {
      * 服务器端口号
      */
     private Integer serverPort = 50000;
+
+    /**
+     * 序列化器
+     */
+    private String serializer = SerializerKeys.JDK;
 
 }

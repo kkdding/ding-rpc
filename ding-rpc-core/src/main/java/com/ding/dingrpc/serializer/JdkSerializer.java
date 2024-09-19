@@ -3,6 +3,7 @@ package com.ding.dingrpc.serializer;
 import java.io.*;
 
 /**
+ * JDK 序列化实现
  * @author: Dding
  * @date: 2024/09/17
  **/

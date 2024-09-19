@@ -2,4 +2,5 @@ rpc:
   name: dingrpc
   version: 2.0
   serverPort: 50002
-  mock: true
+  mock: false
+  serializer: hessian

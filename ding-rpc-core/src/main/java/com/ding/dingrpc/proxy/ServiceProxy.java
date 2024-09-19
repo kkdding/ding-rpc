@@ -6,8 +6,8 @@ import com.ding.dingrpc.RpcApplication;
 import com.ding.dingrpc.config.RpcConfig;
 import com.ding.dingrpc.model.RpcRequest;
 import com.ding.dingrpc.model.RpcResponse;
-import com.ding.dingrpc.serializer.JdkSerializer;
 import com.ding.dingrpc.serializer.Serializer;
+import com.ding.dingrpc.serializer.SerializerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
@@ -29,7 +29,7 @@ public class ServiceProxy implements InvocationHandler {
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) {
         // 指定序列化器
-        Serializer serializer = new JdkSerializer();
+        Serializer serializer = SerializerFactory.getInstance(RpcApplication.getRpcConfig().getSerializer());
 
         // 构造请求
         RpcRequest rpcRequest = RpcRequest.builder()
