@@ -10,7 +10,15 @@ public interface UserService {
 
     /**
      * 获取用户信息
+     *
      * @return
      */
     User getUser(User user);
+
+    /**
+     * 添加方法 - 获取数字
+     */
+    default long getNumber() {
+        return 1L;
+    }
 }

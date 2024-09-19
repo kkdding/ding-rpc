@@ -10,6 +10,9 @@ import lombok.Data;
  **/
 @Data
 public class RpcConfig {
+
+    private boolean mock = false;
+
     /**
      * 名称
      */
