@@ -1,17 +1,23 @@
 package com.ding.dingrpc.proxy;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import com.ding.dingrpc.RpcApplication;
 import com.ding.dingrpc.config.RpcConfig;
+import com.ding.dingrpc.constant.RpcConstant;
 import com.ding.dingrpc.model.RpcRequest;
 import com.ding.dingrpc.model.RpcResponse;
+import com.ding.dingrpc.model.ServiceMetaInfo;
+import com.ding.dingrpc.registry.Registry;
+import com.ding.dingrpc.registry.RegistryFactory;
 import com.ding.dingrpc.serializer.Serializer;
 import com.ding.dingrpc.serializer.SerializerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.util.List;
 
 /**
  * 服务代理（JDK 动态代理）
@@ -32,23 +38,52 @@ public class ServiceProxy implements InvocationHandler {
         Serializer serializer = SerializerFactory.getInstance(RpcApplication.getRpcConfig().getSerializer());
 
         // 构造请求
+        String serviceName = method.getDeclaringClass().getName();
         RpcRequest rpcRequest = RpcRequest.builder()
                 .serviceName(method.getDeclaringClass().getName())
                 .methodName(method.getName())
                 .parameterTypes(method.getParameterTypes())
                 .args(args)
                 .build();
+//        try {
+//            // 序列化
+//            byte[] bodyBytes = serializer.serialize(rpcRequest);
+//            // 构造请求地址
+//            RpcConfig rpcConfig = RpcApplication.getRpcConfig();
+//            String url = "http://" +
+//                    rpcConfig.getServerHost() +
+//                    ":" +
+//                    rpcConfig.getServerPort();
+//            // 发送请求
+//            try (HttpResponse httpResponse = HttpRequest.post(url)
+//                    .body(bodyBytes)
+//                    .execute()) {
+//                byte[] result = httpResponse.bodyBytes();
+//                // 反序列化
+//                RpcResponse rpcResponse = serializer.deserialize(result, RpcResponse.class);
+//                return rpcResponse.getData();
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
         try {
             // 序列化
             byte[] bodyBytes = serializer.serialize(rpcRequest);
-            // 构造请求地址
+
+            // 从注册中心获取服务提供者请求地址
             RpcConfig rpcConfig = RpcApplication.getRpcConfig();
-            String url = "http://" +
-                    rpcConfig.getServerHost() +
-                    ":" +
-                    rpcConfig.getServerPort();
+            Registry registry = RegistryFactory.getInstance(rpcConfig.getRegistryConfig().getRegistry());
+            ServiceMetaInfo serviceMetaInfo = new ServiceMetaInfo();
+            serviceMetaInfo.setServiceName(serviceName);
+            serviceMetaInfo.setServiceVersion(RpcConstant.DEFAULT_SERVICE_VERSION);
+            List<ServiceMetaInfo> serviceMetaInfoList = registry.serviceDiscovery(serviceMetaInfo.getServiceKey());
+            if (CollUtil.isEmpty(serviceMetaInfoList)) {
+                throw new RuntimeException("暂无服务地址");
+            }
+            ServiceMetaInfo selectedServiceMetaInfo = serviceMetaInfoList.get(0);
+
             // 发送请求
-            try (HttpResponse httpResponse = HttpRequest.post(url)
+            try (HttpResponse httpResponse = HttpRequest.post(selectedServiceMetaInfo.getServiceAddress())
                     .body(bodyBytes)
                     .execute()) {
                 byte[] result = httpResponse.bodyBytes();
@@ -59,7 +94,6 @@ public class ServiceProxy implements InvocationHandler {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         return null;
     }
 }

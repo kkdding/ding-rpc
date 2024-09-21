@@ -1,7 +1,12 @@
 package com.ding.example.provider;
 
 import com.ding.dingrpc.RpcApplication;
+import com.ding.dingrpc.config.RegistryConfig;
+import com.ding.dingrpc.config.RpcConfig;
+import com.ding.dingrpc.model.ServiceMetaInfo;
 import com.ding.dingrpc.registry.LocalRegistry;
+import com.ding.dingrpc.registry.Registry;
+import com.ding.dingrpc.registry.RegistryFactory;
 import com.ding.dingrpc.server.VertxHttpServer;
 import com.ding.example.common.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +25,24 @@ public class ProviderExample {
         RpcApplication.init();
 
         // 注册服务
-        LocalRegistry.register(UserService.class.getName(), UserServiceImpl.class);
+        String serviceName = UserService.class.getName();
+        LocalRegistry.register(serviceName, UserServiceImpl.class);
+        log.info("服务注册成功");
+
+        // 注册服务到服务中心
+        RpcConfig rpcConfig = RpcApplication.getRpcConfig();
+        RegistryConfig registryConfig = rpcConfig.getRegistryConfig();
+        Registry registry = RegistryFactory.getInstance(registryConfig.getRegistry());
+        ServiceMetaInfo serviceMetaInfo = new ServiceMetaInfo();
+        serviceMetaInfo.setServiceName(serviceName);
+        serviceMetaInfo.setServiceHost(rpcConfig.getServerHost());
+        serviceMetaInfo.setServicePort(rpcConfig.getServerPort());
+        try {
+            registry.register(serviceMetaInfo);
+        }catch (Exception e){
+            log.error("注册服务到服务中心失败", e);
+            throw new RuntimeException(e);
+        }
 
         // 提供服务
         VertxHttpServer vertxHttpServer = new VertxHttpServer();
