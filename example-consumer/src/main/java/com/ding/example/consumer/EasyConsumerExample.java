@@ -8,7 +8,7 @@ import com.ding.example.common.service.UserService;
  * 简易服务消费者示例
  */
 public class EasyConsumerExample {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         // 静态代理
 //        UserService userService = new UserServiceProxy();
         // 动态代理

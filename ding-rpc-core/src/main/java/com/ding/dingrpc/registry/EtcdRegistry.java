@@ -1,6 +1,7 @@
 package com.ding.dingrpc.registry;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.collection.ConcurrentHashSet;
 import cn.hutool.cron.CronUtil;
 import cn.hutool.cron.task.Task;
 import cn.hutool.json.JSONUtil;
@@ -9,6 +10,7 @@ import com.ding.dingrpc.model.ServiceMetaInfo;
 import io.etcd.jetcd.*;
 import io.etcd.jetcd.options.GetOption;
 import io.etcd.jetcd.options.PutOption;
+import io.etcd.jetcd.watch.WatchEvent;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
@@ -30,7 +32,20 @@ public class EtcdRegistry implements Registry {
 
     private KV kvClient;
 
+    /**
+     * 本机注册的节点集合（用于维护续期）
+     */
     private final Set<String> localRegisterNodeSet = new HashSet<>();
+
+    /**
+     * 注册中心服务元信息缓存
+     */
+    private final RegistryServiceCache registryServiceCache = new RegistryServiceCache();
+
+    /**
+     * 正在监听的 key 集合
+     */
+    private final Set<String> watchingKeySet = new ConcurrentHashSet<>();
 
 
     /**
@@ -100,6 +115,14 @@ public class EtcdRegistry implements Registry {
      */
     @Override
     public List<ServiceMetaInfo> serviceDiscovery(String serviceKey) {
+
+        // 优先读取本地缓存
+        List<ServiceMetaInfo> cacheList = registryServiceCache.readCache();
+        if (cacheList != null) {
+            log.info("从本地缓存读取服务元信息");
+            return cacheList;
+        }
+
         String searchPrefix = ETCD_ROOT_PATH + serviceKey + '/';
         log.info("searchPrefix: " + searchPrefix);
         try {
@@ -111,12 +134,23 @@ public class EtcdRegistry implements Registry {
                     .get()
                     .getKvs();
             // 解析服务信息
-            return keyValues.stream()
+            List<ServiceMetaInfo> serviceMetaInfoList = keyValues.stream()
                     .map(keyValue -> {
+                        // 监听节点key变化
+                        String key = keyValue.getKey().toString(StandardCharsets.UTF_8);
+                        watch(key);
+                        log.info("监听节点：" + key);
+
+                        // 获取服务信息
                         String value = keyValue.getValue().toString(StandardCharsets.UTF_8);
                         return JSONUtil.toBean(value, ServiceMetaInfo.class);
                     })
                     .collect(Collectors.toList());
+            // 写入本地缓存
+            registryServiceCache.writeCache(serviceMetaInfoList);
+
+            log.info("从注册中心读取服务元信息");
+            return serviceMetaInfoList;
         } catch (Exception e) {
             throw new RuntimeException("获取服务列表失败", e);
         }
@@ -132,7 +166,7 @@ public class EtcdRegistry implements Registry {
         for (String key : localRegisterNodeSet) {
             try {
                 kvClient.delete(ByteSequence.from(key, StandardCharsets.UTF_8)).get();
-            } catch (Exception e){
+            } catch (Exception e) {
                 throw new RuntimeException(key + "下线失败", e);
             }
         }
@@ -179,5 +213,32 @@ public class EtcdRegistry implements Registry {
         // 支持秒级别定时任务
         CronUtil.setMatchSecond(true);
         CronUtil.start();
+    }
+
+    /**
+     * 监听服务（消费端）
+     *
+     * @param serviceNodeKey
+     */
+    @Override
+    public void watch(String serviceNodeKey) {
+        Watch watchClient = client.getWatchClient();
+
+        // 未被监听的节点,开启监听
+        boolean newWatch = watchingKeySet.add(serviceNodeKey);
+        if (newWatch) {
+            watchClient.watch(ByteSequence.from(serviceNodeKey, StandardCharsets.UTF_8), watchResponse -> {
+                for (WatchEvent event : watchResponse.getEvents()) {
+                    switch (event.getEventType()) {
+                        case DELETE:
+                            registryServiceCache.removeCache();
+                            log.info("节点{}本地缓存被删除", event.getKeyValue().getKey().toString(StandardCharsets.UTF_8));
+                        case PUT:
+                        default:
+                            break;
+                    }
+                }
+            });
+        }
     }
 }

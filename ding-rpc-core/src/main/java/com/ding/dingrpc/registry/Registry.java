@@ -50,4 +50,10 @@ public interface Registry {
      * 心跳检测（服务端）
      */
     void heartBeat();
+
+    /**
+     * 监听服务（消费端）
+     * @param serviceNodeKey
+     */
+    void watch(String serviceNodeKey);
 }
