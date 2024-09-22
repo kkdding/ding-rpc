@@ -1,15 +1,21 @@
 package com.ding.dingrpc.registry;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.cron.CronUtil;
+import cn.hutool.cron.task.Task;
 import cn.hutool.json.JSONUtil;
 import com.ding.dingrpc.config.RegistryConfig;
 import com.ding.dingrpc.model.ServiceMetaInfo;
 import io.etcd.jetcd.*;
 import io.etcd.jetcd.options.GetOption;
 import io.etcd.jetcd.options.PutOption;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -17,11 +23,14 @@ import java.util.stream.Collectors;
  * @author: Dding
  * @date: 2024/09/21
  **/
+@Slf4j
 public class EtcdRegistry implements Registry {
 
     private Client client;
 
     private KV kvClient;
+
+    private final Set<String> localRegisterNodeSet = new HashSet<>();
 
 
     /**
@@ -36,8 +45,12 @@ public class EtcdRegistry implements Registry {
      */
     @Override
     public void init(RegistryConfig registryConfig) {
-        client = Client.builder().endpoints(registryConfig.getAddress()).connectTimeout(Duration.ofMillis(registryConfig.getTimeout())).build();
+        client = Client.builder()
+                .endpoints(registryConfig.getAddress())
+                .connectTimeout(Duration.ofMillis(registryConfig.getTimeout()))
+                .build();
         kvClient = client.getKVClient();
+        heartBeat();
     }
 
     /**
@@ -61,6 +74,9 @@ public class EtcdRegistry implements Registry {
         // 将键值对与租约关联起来，并设置过期时间
         PutOption putOption = PutOption.builder().withLeaseId(leaseId).build();
         kvClient.put(key, value, putOption).get();
+
+        // 添加节点信息到本地缓存
+        localRegisterNodeSet.add(registerKey);
     }
 
     /**
@@ -70,7 +86,10 @@ public class EtcdRegistry implements Registry {
      */
     @Override
     public void unRegister(ServiceMetaInfo serviceMetaInfo) throws ExecutionException, InterruptedException {
-        kvClient.delete(ByteSequence.from(ETCD_ROOT_PATH + serviceMetaInfo.getServiceNodeKey(), StandardCharsets.UTF_8)).get();
+        String registryKey = ETCD_ROOT_PATH + serviceMetaInfo.getServiceNodeKey();
+        kvClient.delete(ByteSequence.from(registryKey, StandardCharsets.UTF_8)).get();
+        // 将节点信息从本地缓存删除
+        localRegisterNodeSet.remove(registryKey);
     }
 
     /**
@@ -81,8 +100,8 @@ public class EtcdRegistry implements Registry {
      */
     @Override
     public List<ServiceMetaInfo> serviceDiscovery(String serviceKey) {
-        // TODO: 前缀搜索格式待验证
         String searchPrefix = ETCD_ROOT_PATH + serviceKey + '/';
+        log.info("searchPrefix: " + searchPrefix);
         try {
             // 前缀查询
             GetOption getOption = GetOption.builder().isPrefix(true).build();
@@ -109,6 +128,15 @@ public class EtcdRegistry implements Registry {
     @Override
     public void destroy() {
         System.out.println("当前节点下线");
+        // 下线节点
+        for (String key : localRegisterNodeSet) {
+            try {
+                kvClient.delete(ByteSequence.from(key, StandardCharsets.UTF_8)).get();
+            } catch (Exception e){
+                throw new RuntimeException(key + "下线失败", e);
+            }
+        }
+
         // 释放资源
         if (kvClient != null) {
             kvClient.close();
@@ -116,5 +144,40 @@ public class EtcdRegistry implements Registry {
         if (client != null) {
             client.close();
         }
+    }
+
+    /**
+     * 心跳检测（服务端）
+     */
+    @Override
+    public void heartBeat() {
+
+        CronUtil.schedule("*/10 * * * * *", new Task() {
+            @Override
+            public void execute() {
+                for (String key : localRegisterNodeSet) {
+                    try {
+                        List<KeyValue> keyValues = kvClient.get(ByteSequence.from(key, StandardCharsets.UTF_8))
+                                .get()
+                                .getKvs();
+                        // 该节点已过期（需要重启节点才能重新注册）
+                        if (CollUtil.isEmpty(keyValues)) {
+                            continue;
+                        }
+                        // 节点未过期，重新注册（相当于续签）
+                        KeyValue keyValue = keyValues.get(0);
+                        String value = keyValue.getValue().toString(StandardCharsets.UTF_8);
+                        ServiceMetaInfo serviceMetaInfo = JSONUtil.toBean(value, ServiceMetaInfo.class);
+                        register(serviceMetaInfo);
+                    } catch (Exception e) {
+                        throw new RuntimeException(key + "续签失败", e);
+                    }
+                }
+            }
+        });
+
+        // 支持秒级别定时任务
+        CronUtil.setMatchSecond(true);
+        CronUtil.start();
     }
 }

@@ -4,5 +4,5 @@ rpc:
   mock: false
   serializer: hessian
   serverHost: localhost
-  serverPort: 50002
+  serverPort: 50005
 
