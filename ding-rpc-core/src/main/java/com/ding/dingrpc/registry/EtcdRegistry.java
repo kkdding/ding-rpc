@@ -117,7 +117,7 @@ public class EtcdRegistry implements Registry {
     public List<ServiceMetaInfo> serviceDiscovery(String serviceKey) {
 
         // 优先读取本地缓存
-        List<ServiceMetaInfo> cacheList = registryServiceCache.readCache();
+        List<ServiceMetaInfo> cacheList = registryServiceCache.readCache(serviceKey);
         if (cacheList != null) {
             log.info("从本地缓存读取服务元信息");
             return cacheList;
@@ -147,7 +147,7 @@ public class EtcdRegistry implements Registry {
                     })
                     .collect(Collectors.toList());
             // 写入本地缓存
-            registryServiceCache.writeCache(serviceMetaInfoList);
+            registryServiceCache.writeCache(serviceKey, serviceMetaInfoList);
 
             log.info("从注册中心读取服务元信息");
             return serviceMetaInfoList;
@@ -231,7 +231,9 @@ public class EtcdRegistry implements Registry {
                 for (WatchEvent event : watchResponse.getEvents()) {
                     switch (event.getEventType()) {
                         case DELETE:
-                            registryServiceCache.removeCache();
+                            String serviceKey = serviceNodeKey.split("/")[2];
+                            log.info("检测serviceKey: {}", serviceKey);
+                            registryServiceCache.removeCache(serviceKey);
                             log.info("节点{}本地缓存被删除", event.getKeyValue().getKey().toString(StandardCharsets.UTF_8));
                         case PUT:
                         default:

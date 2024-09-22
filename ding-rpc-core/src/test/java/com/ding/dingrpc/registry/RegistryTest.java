@@ -71,7 +71,7 @@ public class RegistryTest {
         List<ServiceMetaInfo> serviceMetaInfoListSecond = registry.serviceDiscovery(serviceKey);
         System.out.println("第二次读取: " + serviceMetaInfoListSecond);
         unRegister();
-        Thread.sleep(5000);
+        Thread.sleep(1000);
         List<ServiceMetaInfo> serviceMetaInfoListThird = registry.serviceDiscovery(serviceKey);
         System.out.println("第三次读取: " + serviceMetaInfoListThird);
     }
