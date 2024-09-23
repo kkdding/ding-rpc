@@ -77,6 +77,22 @@ public class RegistryTest {
     }
 
     @Test
+    public void serviceDiscoveryRealProvider() throws Exception {
+        ServiceMetaInfo serviceMetaInfo = new ServiceMetaInfo();
+        serviceMetaInfo.setServiceName("com.ding.example.common.service.UserService");
+        serviceMetaInfo.setServiceVersion("1.0");
+        String serviceKey = serviceMetaInfo.getServiceKey();
+        List<ServiceMetaInfo> serviceMetaInfoList = registry.serviceDiscovery(serviceKey);
+        Assert.assertNotNull(serviceMetaInfoList);
+        System.out.println("第一次读取: " + serviceMetaInfoList);
+        List<ServiceMetaInfo> serviceMetaInfoListSecond = registry.serviceDiscovery(serviceKey);
+        System.out.println("第二次读取: " + serviceMetaInfoListSecond);
+        Thread.sleep(10000);
+        List<ServiceMetaInfo> serviceMetaInfoListThird = registry.serviceDiscovery(serviceKey);
+        System.out.println("第三次读取: " + serviceMetaInfoListThird);
+    }
+
+    @Test
     public void heartBeat() throws Exception {
         // init 方法中已经执行心跳检测了
         register();

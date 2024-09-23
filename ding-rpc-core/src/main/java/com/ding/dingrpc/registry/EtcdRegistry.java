@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 /**
+ * etcd 注册中心实现
  * @author: Dding
  * @date: 2024/09/21
  **/
@@ -51,7 +52,7 @@ public class EtcdRegistry implements Registry {
     /**
      * 根节点
      */
-    private static final String ETCD_ROOT_PATH = "/rpc/";
+    private static final String ETCD_ROOT_PATH = "/rpc-etcd/";
 
     /**
      * 初始化
