@@ -7,7 +7,7 @@ import com.ding.dingrpc.model.ServiceMetaInfo;
 import com.ding.dingrpc.registry.LocalRegistry;
 import com.ding.dingrpc.registry.Registry;
 import com.ding.dingrpc.registry.RegistryFactory;
-import com.ding.dingrpc.server.VertxHttpServer;
+import com.ding.dingrpc.server.tcp.VertxTcpServer;
 import com.ding.example.common.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,8 +44,13 @@ public class ProviderExample {
             throw new RuntimeException(e);
         }
 
-        // 提供服务
-        VertxHttpServer vertxHttpServer = new VertxHttpServer();
-        vertxHttpServer.start(RpcApplication.getRpcConfig().getServerPort());
+        // 提供 HTTP 服务
+//        VertxHttpServer vertxHttpServer = new VertxHttpServer();
+//        vertxHttpServer.start(RpcApplication.getRpcConfig().getServerPort());
+
+        // 提供 TCP 服务
+        VertxTcpServer vertxTcpServer = new VertxTcpServer();
+        vertxTcpServer.start(RpcApplication.getRpcConfig().getServerPort());
+
     }
 }
