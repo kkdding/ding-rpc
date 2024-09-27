@@ -4,6 +4,8 @@ import cn.hutool.core.collection.CollUtil;
 import com.ding.dingrpc.RpcApplication;
 import com.ding.dingrpc.config.RpcConfig;
 import com.ding.dingrpc.constant.RpcConstant;
+import com.ding.dingrpc.loadbalancer.LoadBalancer;
+import com.ding.dingrpc.loadbalancer.LoadBalancerFactory;
 import com.ding.dingrpc.model.RpcRequest;
 import com.ding.dingrpc.model.RpcResponse;
 import com.ding.dingrpc.model.ServiceMetaInfo;
@@ -15,7 +17,9 @@ import com.ding.dingrpc.server.tcp.VertxTcpClient;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 服务代理（JDK 动态代理）
@@ -78,7 +82,14 @@ public class ServiceProxy implements InvocationHandler {
             if (CollUtil.isEmpty(serviceMetaInfoList)) {
                 throw new RuntimeException("暂无服务地址");
             }
-            ServiceMetaInfo selectedServiceMetaInfo = serviceMetaInfoList.get(0);
+//            ServiceMetaInfo selectedServiceMetaInfo = serviceMetaInfoList.get(0);
+
+            // 负载均衡
+            LoadBalancer loadBalancer = LoadBalancerFactory.getInstance(rpcConfig.getLoadBalancer());
+            // 将调用方法名（请求路径）作为负载均衡参数
+            Map<String, Object> requestParams = new HashMap<>();
+            requestParams.put("methodName", rpcRequest.getMethodName());
+            ServiceMetaInfo selectedServiceMetaInfo = loadBalancer.select(requestParams, serviceMetaInfoList);
 
             // 发送 HTTP 请求
 //            try (HttpResponse httpResponse = HttpRequest.post(selectedServiceMetaInfo.getServiceAddress())
