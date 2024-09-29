@@ -6,6 +6,8 @@ import com.ding.dingrpc.config.RpcConfig;
 import com.ding.dingrpc.constant.RpcConstant;
 import com.ding.dingrpc.fault.retry.RetryStrategy;
 import com.ding.dingrpc.fault.retry.RetryStrategyFactory;
+import com.ding.dingrpc.fault.tolerant.TolerantStrategy;
+import com.ding.dingrpc.fault.tolerant.TolerantStrategyFactory;
 import com.ding.dingrpc.loadbalancer.LoadBalancer;
 import com.ding.dingrpc.loadbalancer.LoadBalancerFactory;
 import com.ding.dingrpc.model.RpcRequest;
@@ -104,8 +106,17 @@ public class ServiceProxy implements InvocationHandler {
 //            }
 
             // 发送 TCP 请求
-            RetryStrategy retryStrategy = RetryStrategyFactory.getInstance(rpcConfig.getRetryStrategy());
-            RpcResponse rpcResponse = retryStrategy.doRetry(() -> VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo));
+            // 重试机制
+            RpcResponse rpcResponse = new RpcResponse();
+            try {
+                RetryStrategy retryStrategy = RetryStrategyFactory.getInstance(rpcConfig.getRetryStrategy());
+                rpcResponse = retryStrategy.doRetry(() -> VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo));
+
+            } catch (Exception exception) {
+                // 容错机制
+                TolerantStrategy tolerantStrategy = TolerantStrategyFactory.getInstance(rpcConfig.getTolerantStrategy());
+                tolerantStrategy.doTolerant(null, exception);
+            }
             return rpcResponse.getData();
         } catch (Exception e) {
             throw new RuntimeException("调用失败");

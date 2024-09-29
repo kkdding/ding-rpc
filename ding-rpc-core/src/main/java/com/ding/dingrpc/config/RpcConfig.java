@@ -1,6 +1,7 @@
 package com.ding.dingrpc.config;
 
 import com.ding.dingrpc.fault.retry.RetryStrategyKeys;
+import com.ding.dingrpc.fault.tolerant.TolerantStrategyKeys;
 import com.ding.dingrpc.loadbalancer.LoadBalancerKeys;
 import com.ding.dingrpc.serializer.SerializerKeys;
 import lombok.Data;
@@ -55,5 +56,10 @@ public class RpcConfig {
      * 重试策略
      */
     private String retryStrategy = RetryStrategyKeys.FIXED_INTERVAL;
+
+    /**
+     * 容错策略
+     */
+    private String tolerantStrategy = TolerantStrategyKeys.FAIL_FAST;
 
 }
