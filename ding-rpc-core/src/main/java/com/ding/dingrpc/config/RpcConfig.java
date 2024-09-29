@@ -1,5 +1,6 @@
 package com.ding.dingrpc.config;
 
+import com.ding.dingrpc.fault.retry.RetryStrategyKeys;
 import com.ding.dingrpc.loadbalancer.LoadBalancerKeys;
 import com.ding.dingrpc.serializer.SerializerKeys;
 import lombok.Data;
@@ -49,5 +50,10 @@ public class RpcConfig {
      * 负载均衡器
      */
     private String loadBalancer = LoadBalancerKeys.ROUND_ROBIN;
+
+    /**
+     * 重试策略
+     */
+    private String retryStrategy = RetryStrategyKeys.FIXED_INTERVAL;
 
 }

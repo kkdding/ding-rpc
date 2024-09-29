@@ -1,0 +1,2 @@
+no=com.ding.dingrpc.fault.retry.NoRetryStrategy
+fixedInterval=com.ding.dingrpc.fault.retry.FixedIntervalRetryStrategy

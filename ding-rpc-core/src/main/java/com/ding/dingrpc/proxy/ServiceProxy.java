@@ -4,6 +4,8 @@ import cn.hutool.core.collection.CollUtil;
 import com.ding.dingrpc.RpcApplication;
 import com.ding.dingrpc.config.RpcConfig;
 import com.ding.dingrpc.constant.RpcConstant;
+import com.ding.dingrpc.fault.retry.RetryStrategy;
+import com.ding.dingrpc.fault.retry.RetryStrategyFactory;
 import com.ding.dingrpc.loadbalancer.LoadBalancer;
 import com.ding.dingrpc.loadbalancer.LoadBalancerFactory;
 import com.ding.dingrpc.model.RpcRequest;
@@ -101,8 +103,9 @@ public class ServiceProxy implements InvocationHandler {
 //                return rpcResponse.getData();
 //            }
 
-            // 发送 TCP 请求
-            RpcResponse rpcResponse = VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo);
+            // 发送 TCP 请求 TODO: bugs need to be fixed
+            RetryStrategy retryStrategy = RetryStrategyFactory.getInstance(rpcConfig.getRetryStrategy());
+            RpcResponse rpcResponse = retryStrategy.doRetry(() -> VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo));
             return rpcResponse.getData();
         } catch (Exception e) {
             throw new RuntimeException("调用失败");
