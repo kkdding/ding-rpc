@@ -1,5 +1,6 @@
 package com.ding.example.consumer;
 
+import com.ding.dingrpc.bootstrap.ConsumerBootstrap;
 import com.ding.dingrpc.proxy.ServiceProxyFactory;
 import com.ding.example.common.model.User;
 import com.ding.example.common.service.UserService;
@@ -8,7 +9,10 @@ import com.ding.example.common.service.UserService;
  * 简易服务消费者示例
  */
 public class EasyConsumerExample {
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
+        // 服务提供者初始化
+        ConsumerBootstrap.init();
+
         // 静态代理
 //        UserService userService = new UserServiceProxy();
         // 动态代理
@@ -23,7 +27,7 @@ public class EasyConsumerExample {
         } else {
             System.out.println("user == null");
         }
-        long number = userService.getNumber();
-        System.out.println("number -> " + number);
+//        long number = userService.getNumber();
+//        System.out.println("number -> " + number);
     }
 }

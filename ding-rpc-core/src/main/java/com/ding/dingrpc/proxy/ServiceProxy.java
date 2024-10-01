@@ -46,7 +46,7 @@ public class ServiceProxy implements InvocationHandler {
         // 构造请求
         String serviceName = method.getDeclaringClass().getName();
         RpcRequest rpcRequest = RpcRequest.builder()
-                .serviceName(method.getDeclaringClass().getName())
+                .serviceName(serviceName)
                 .methodName(method.getName())
                 .parameterTypes(method.getParameterTypes())
                 .args(args)
@@ -107,19 +107,19 @@ public class ServiceProxy implements InvocationHandler {
 
             // 发送 TCP 请求
             // 重试机制
-            RpcResponse rpcResponse = new RpcResponse();
+            RpcResponse rpcResponse;
             try {
                 RetryStrategy retryStrategy = RetryStrategyFactory.getInstance(rpcConfig.getRetryStrategy());
+                // TODO: 反射失效问题
                 rpcResponse = retryStrategy.doRetry(() -> VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo));
-
             } catch (Exception exception) {
                 // 容错机制
                 TolerantStrategy tolerantStrategy = TolerantStrategyFactory.getInstance(rpcConfig.getTolerantStrategy());
-                tolerantStrategy.doTolerant(null, exception);
+                rpcResponse = tolerantStrategy.doTolerant(null, exception);
             }
             return rpcResponse.getData();
         } catch (Exception e) {
-            throw new RuntimeException("调用失败");
+            throw new RuntimeException("调用失败", e);
         }
     }
 }

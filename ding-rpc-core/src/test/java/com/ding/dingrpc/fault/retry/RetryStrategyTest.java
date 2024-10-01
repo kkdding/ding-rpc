@@ -20,8 +20,8 @@ public class RetryStrategyTest {
         try {
             RpcResponse rpcResponse = retryStrategy.doRetry(() -> {
                 System.out.println("测试重试");
-                throw new RuntimeException("模拟重试失败");
-//                return RpcResponse.builder().build();
+//                throw new RuntimeException("模拟重试失败");
+                return RpcResponse.builder().build();
             });
             log.info("请求结果：{}", rpcResponse);
         } catch (Exception exception) {
